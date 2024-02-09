@@ -1,2 +1,10 @@
 ﻿  main.c
+F:\repos\http-c\http-c\main.c(24,15): warning C4133: 'function': incompatible types - from 'sockaddr_in *' to 'const sockaddr *'
+F:\repos\http-c\http-c\main.c(29,25): warning C4047: 'function': 'SOCKET' differs in levels of indirection from 'SOCKET *'
+F:\repos\http-c\http-c\main.c(29,25): warning C4024: 'accept': different types for formal and actual parameter 1
+F:\repos\http-c\http-c\main.c(47,44): warning C4047: 'function': 'size_t' differs in levels of indirection from 'char *'
+F:\repos\http-c\http-c\main.c(47,44): warning C4024: 'malloc': different types for formal and actual parameter 1
+F:\repos\http-c\http-c\main.c(52,44): warning C4047: 'function': 'rsize_t' differs in levels of indirection from 'char *'
+F:\repos\http-c\http-c\main.c(52,44): warning C4024: 'strcpy_s': different types for formal and actual parameter 2
+F:\repos\http-c\http-c\main.c(62,4): warning C4013: 'open' undefined; assuming extern returning int
   http-c.vcxproj -> F:\repos\http-c\x64\Debug\http-c.exe

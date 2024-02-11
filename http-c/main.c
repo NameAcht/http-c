@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 // platform
 #ifdef _WIN32
@@ -9,10 +10,16 @@
 # include <sys/socket.h>
 #endif
 
+void* check_ptr(void* data) {
+	if (!data) {
+		printf("Out of memory.\n");
+		exit(420);
+	}
+	return data;
+}
 void substr(char* dst, const char* src, size_t size) {
 	memcpy(dst, src, size);
 	dst[size] = '\0';
-	return dst;
 }
 
 int main() {
@@ -43,8 +50,7 @@ int main() {
 
 	listen(listen_socket, 20);
 
-	while (1) {
-		// get client file descriptor
+	while (true) {
 		SOCKET client = accept(listen_socket, NULL, NULL);
 
 		// receive message from client
@@ -53,11 +59,7 @@ int main() {
 
 		// parse request type
 		int req_type_len = strchr(msg, ' ') - msg;
-		char* req_type = malloc(req_type_len + 1);
-		if (!req_type) {
-			printf("Out of memory.\n");
-			return 0;
-		}
+		char* req_type = check_ptr(malloc(req_type_len + 1));
 		substr(req_type, msg, req_type_len);
 		if (!req_type) {
 			printf("Error parsing Request.\n");
@@ -66,11 +68,7 @@ int main() {
 
 		// parse file name
 		int file_name_len = strchr(strchr(msg, '/') + 1, ' ') - (strchr(msg, '/') + 1);
-		char* file_name = malloc(file_name_len + 1);
-		if (!file_name) {
-			printf("Out of memory.\n");
-			return 0;
-		}
+		char* file_name = check_ptr(malloc(file_name_len + 1));
 		substr(file_name, msg + req_type_len + 2, file_name_len);
 		if (!file_name) {
 			printf("Error parsing Request\n");
@@ -78,10 +76,11 @@ int main() {
 		}
 		// index.html default
 		if (strlen(file_name) == 0) {
-			file_name = "index.html";
+			file_name = check_ptr(realloc(file_name, 11));
+			strcpy(file_name, "index.html");
 		}
 
-		char* file_path = malloc(strlen(file_name) + 4);
+		char* file_path = check_ptr(malloc(strlen(file_name) + 4));
 		strcpy(file_path, "../");
 		strcpy(file_path + 3, file_name);
 
@@ -99,11 +98,7 @@ int main() {
 				long fsize = ftell(file);
 				rewind(file);
 
-				char* file_cont = malloc(fsize + 1);
-				if (!file_cont) {
-					printf("Out of Memory.");
-					return 0;
-				}
+				char* file_cont = check_ptr(malloc(fsize + 1));
 				fread(file_cont, fsize, 1, file);
 				file_cont[fsize] = '\0';
 				fclose(file);

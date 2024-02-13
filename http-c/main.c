@@ -3,6 +3,9 @@
 #include <fcntl.h>
 #include <stdbool.h>
 
+#define STYLESHEET "../concrete.css"
+#define INDEX "../index.html"
+
 // platform
 #ifdef _WIN32
 # include <WinSock2.h>
@@ -13,13 +16,28 @@
 void* check_ptr(void* data) {
 	if (!data) {
 		printf("Out of memory.\n");
-		exit(420);
+		exit(69);
 	}
 	return data;
 }
 void substr(char* dst, const char* src, size_t size) {
 	memcpy(dst, src, size);
 	dst[size] = '\0';
+}
+// make sure to free this pointer
+char* parse_file(const char* path) {
+	FILE* file = fopen(path, "r");
+	if (!file)
+		return 0;
+	fseek(file, 0, SEEK_END);
+	long fsize = ftell(file);
+	rewind(file);
+
+	char* file_cont = check_ptr(malloc(fsize + 1));
+	fread(file_cont, fsize, 1, file);
+	file_cont[fsize] = '\0';
+	fclose(file);
+	return file_cont;
 }
 
 int main() {
@@ -86,37 +104,34 @@ int main() {
 
 		// handle requests
 		if (strcmp(req_type, "GET") == 0) {
-			FILE* file = fopen(file_path, "r");
-			if (!file) {
+			char* file_cont = parse_file(file_path);
+			if (!file_cont) {
 				printf("Failed to open file: %s\n", file_path);
 				return 0;
 			}
-			else {
-				printf("GET request: ");
 
-				fseek(file, 0, SEEK_END);
-				long fsize = ftell(file);
-				rewind(file);
-
-				char* file_cont = check_ptr(malloc(fsize + 1));
-				fread(file_cont, fsize, 1, file);
-				file_cont[fsize] = '\0';
-				fclose(file);
-
-				// send file content
-				char* http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
-				send(client, http_response, strlen(http_response), 0);
-				send(client, file_cont, strlen(file_cont), 0);
-
-				// flush and close connection
-				shutdown(client, SD_SEND);
-				closesocket(client);
-
-				// free memory
-				free(req_type);
-				free(file_cont);
-				free(file_name);
+			char* css_cont = parse_file(STYLESHEET);
+			if (!css_cont) {
+				printf("Failed to open file %s\n", STYLESHEET);
+				return 0;
 			}
+
+			printf("GET request: ");
+
+			// send file content
+			char* html_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
+			send(client, html_response, strlen(html_response), 0);
+			send(client, file_cont, strlen(file_cont), 0);
+			
+
+			// flush and close connection
+			shutdown(client, SD_SEND);
+			closesocket(client);
+
+			// free memory
+			free(req_type);
+			free(file_cont);
+			free(file_name);
 		}
 	}
 

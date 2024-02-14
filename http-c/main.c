@@ -39,6 +39,13 @@ char* parse_file(const char* path) {
 	fclose(file);
 	return file_cont;
 }
+char* base_headers(const char* path) {
+	if (strstr(path, ".html"))
+		return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n";
+	if (strstr(path, ".css"))
+		return "HTTP/1.1 200 OK\nContent-Type: text/css\n\n";
+	return NULL;
+}
 
 int main() {
 	// WinSock boilerplate
@@ -104,25 +111,19 @@ int main() {
 
 		// handle requests
 		if (strcmp(req_type, "GET") == 0) {
+			// parse file content
 			char* file_cont = parse_file(file_path);
 			if (!file_cont) {
 				printf("Failed to open file: %s\n", file_path);
 				return 0;
 			}
 
-			char* css_cont = parse_file(STYLESHEET);
-			if (!css_cont) {
-				printf("Failed to open file %s\n", STYLESHEET);
-				return 0;
-			}
-
 			printf("GET request: ");
 
-			// send file content
-			char* html_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
-			send(client, html_response, strlen(html_response), 0);
+			// send response
+			char* headers = base_headers(file_path);
+			send(client, headers, strlen(headers), 0);
 			send(client, file_cont, strlen(file_cont), 0);
-			
 
 			// flush and close connection
 			shutdown(client, SD_SEND);

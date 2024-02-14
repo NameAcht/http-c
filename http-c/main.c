@@ -89,7 +89,7 @@ int main() {
 		// receive message from client
 		char msg[256];
 		if (recv(client, msg, 256, 0) == -1) {
-			printf("Buffer overflow on request message.");
+			printf("Buffer overflow on request message.\n");
 			send(client, ERROR_BAD_REQUEST, sizeof(ERROR_BAD_REQUEST), 0);
 			close_conn(client);
 			continue;

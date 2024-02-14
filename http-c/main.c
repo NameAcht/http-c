@@ -5,7 +5,8 @@
 
 #define STYLESHEET "../concrete.css"
 #define INDEX "../index.html"
-#define ERROR_404 "HTTP/1.1 404 Not found\nContent-Type: text/html\n\n404 Not found"
+#define ERROR_NOT_FOUND "HTTP/1.1 404 Not found\nContent-Type: text/html\n\n404 Not found"
+#define ERROR_BAD_REQUEST "HTTP/1.1 400 Bad request\nContent-Type: text/html\n\n400 Bad request"
 
 // platform
 #ifdef _WIN32
@@ -47,6 +48,11 @@ char* base_headers(const char* path) {
 		return "HTTP/1.1 200 OK\nContent-Type: text/css\n\n";
 	return NULL;
 }
+// flush and close connection
+void close_conn(SOCKET client) {
+	shutdown(client, SD_SEND);
+	closesocket(client);
+}
 
 int main() {
 	// WinSock boilerplate
@@ -76,12 +82,18 @@ int main() {
 
 	listen(listen_socket, 20);
 
+	// http loop
 	while (true) {
 		SOCKET client = accept(listen_socket, NULL, NULL);
 
 		// receive message from client
 		char msg[256];
-		recv(client, msg, 256, 0);
+		if (recv(client, msg, 256, 0) == -1) {
+			printf("Buffer overflow on request message.");
+			send(client, ERROR_BAD_REQUEST, sizeof(ERROR_BAD_REQUEST), 0);
+			close_conn(client);
+			continue;
+		}
 
 		// parse request type
 		int req_type_len = strchr(msg, ' ') - msg;
@@ -89,7 +101,9 @@ int main() {
 		substr(req_type, msg, req_type_len);
 		if (!req_type) {
 			printf("Error parsing Request.\n");
-			return 0;
+			send(client, ERROR_BAD_REQUEST, sizeof(ERROR_BAD_REQUEST), 0);
+			close_conn(client);
+			continue;
 		}
 
 		// parse file name
@@ -98,14 +112,15 @@ int main() {
 		substr(file_name, msg + req_type_len + 2, file_name_len);
 		if (!file_name) {
 			printf("Error parsing Request\n");
-			return 0;
+			send(client, ERROR_BAD_REQUEST, sizeof(ERROR_BAD_REQUEST), 0);
+			close_conn(client);
+			continue;
 		}
 		// index.html default
 		if (strlen(file_name) == 0) {
 			file_name = check_ptr(realloc(file_name, 11));
 			strcpy(file_name, "index.html");
 		}
-
 		char* file_path = check_ptr(malloc(strlen(file_name) + 4));
 		strcpy(file_path, "../");
 		strcpy(file_path + 3, file_name);
@@ -116,9 +131,8 @@ int main() {
 			char* file_cont = parse_file(file_path);
 			if (!file_cont) {
 				printf("Failed to open file: %s\n", file_path);
-				send(client, ERROR_404, sizeof(ERROR_404), 0);
-				shutdown(client, SD_SEND);
-				closesocket(client);
+				send(client, ERROR_NOT_FOUND, sizeof(ERROR_NOT_FOUND), 0);
+				close_conn(client);
 				continue;
 			}
 
@@ -129,9 +143,7 @@ int main() {
 			send(client, headers, strlen(headers), 0);
 			send(client, file_cont, strlen(file_cont), 0);
 
-			// flush and close connection
-			shutdown(client, SD_SEND);
-			closesocket(client);
+			close_conn(client);
 
 			// free memory
 			free(req_type);

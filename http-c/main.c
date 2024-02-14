@@ -7,6 +7,7 @@
 #define INDEX "../index.html"
 #define ERROR_NOT_FOUND "HTTP/1.1 404 Not found\nContent-Type: text/html\n\n404 Not found"
 #define ERROR_BAD_REQUEST "HTTP/1.1 400 Bad request\nContent-Type: text/html\n\n400 Bad request"
+#define PORT 1000
 
 // platform
 #ifdef _WIN32
@@ -27,7 +28,7 @@ void substr(char* dst, const char* src, size_t size) {
 	dst[size] = '\0';
 }
 // make sure to free this pointer
-char* parse_file(const char* path) {
+char* read_file(const char* path) {
 	FILE* file = fopen(path, "r");
 	if (!file)
 		return 0;
@@ -53,6 +54,16 @@ void close_conn(SOCKET client) {
 	shutdown(client, SD_SEND);
 	closesocket(client);
 }
+// convert 32-bit int to ipv4 string
+char* itoipv4(unsigned int ip_int) {
+	char* ip_str = check_ptr(malloc(16));
+	sprintf(ip_str, "%u.%u.%u.%u",
+		ip_int & 0xFF,
+		(ip_int >> 8) & 0xFF,
+		(ip_int >> 16) & 0xFF,
+		(ip_int >> 24) & 0xFF);
+	return ip_str;
+}
 
 int main() {
 	// WinSock boilerplate
@@ -73,7 +84,7 @@ int main() {
 	// create socket address
 	struct sockaddr_in addr = {
 		.sin_family	= AF_INET,
-		.sin_port	= htons(0x3E8),
+		.sin_port	= htons(PORT),
 		.sin_addr	= 0,
 	};
 
@@ -85,6 +96,12 @@ int main() {
 	// http loop
 	while (true) {
 		SOCKET client = accept(listen_socket, NULL, NULL);
+
+		// Get client IP address
+		struct sockaddr_in client_addr;
+		int client_addr_len = sizeof(client_addr);
+		if (getpeername(client, (struct sockaddr*)&client_addr, &client_addr_len) == SOCKET_ERROR)
+			printf("Getpeername failed.\n");
 
 		// receive message from client
 		char msg[256];
@@ -128,7 +145,8 @@ int main() {
 		// handle requests
 		if (strcmp(req_type, "GET") == 0) {
 			// parse file content
-			char* file_cont = parse_file(file_path);
+			char* file_cont = read_file(file_path);
+			// file not found handling
 			if (!file_cont) {
 				printf("Failed to open file: %s\n", file_path);
 				send(client, ERROR_NOT_FOUND, sizeof(ERROR_NOT_FOUND), 0);
@@ -136,7 +154,10 @@ int main() {
 				continue;
 			}
 
-			printf("GET request: ");
+			// print client request info
+			char* ip_str = itoipv4(client_addr.sin_addr.S_un.S_addr);
+			printf("GET request: %s\n", ip_str);
+			
 
 			// send response
 			char* headers = base_headers(file_path);
@@ -149,6 +170,7 @@ int main() {
 			free(req_type);
 			free(file_cont);
 			free(file_name);
+			free(ip_str);
 		}
 	}
 

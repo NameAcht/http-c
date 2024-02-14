@@ -1,13 +1,2 @@
 ﻿  main.c
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared\winerror.h(7509,1): warning C4005: 'ERROR_NOT_FOUND': macro redefinition
-  (compiling source file 'main.c')
-  F:\repos\http-c\http-c\main.c(8,1):
-  see previous definition of 'ERROR_NOT_FOUND'
-  
-F:\repos\http-c\http-c\main.c(151,18): warning C4047: 'function': 'const char *' differs in levels of indirection from 'long'
-F:\repos\http-c\http-c\main.c(151,18): warning C4024: 'send': different types for formal and actual parameter 2
-F:\repos\http-c\http-c\main.c(163,26): warning C4267: 'function': conversion from 'size_t' to 'int', possible loss of data
-F:\repos\http-c\http-c\main.c(164,28): warning C4267: 'function': conversion from 'size_t' to 'int', possible loss of data
-F:\repos\http-c\http-c\main.c(116,39): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
-F:\repos\http-c\http-c\main.c(127,57): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
   http-c.vcxproj -> F:\repos\http-c\x64\Debug\http-c.exe

@@ -5,8 +5,8 @@
 
 #define STYLESHEET "../concrete.css"
 #define INDEX "../index.html"
-#define ERROR_NOT_FOUND "HTTP/1.1 404 Not found\nContent-Type: text/html\n\n404 Not found"
-#define ERROR_BAD_REQUEST "HTTP/1.1 400 Bad request\nContent-Type: text/html\n\n400 Bad request"
+#define ERROR_404 "HTTP/1.1 404 Not found\nContent-Type: text/html\n\n404 Not found"
+#define ERROR_400 "HTTP/1.1 400 Bad request\nContent-Type: text/html\n\n400 Bad request"
 #define PORT 1000
 
 // platform
@@ -107,29 +107,29 @@ int main() {
 		char msg[256];
 		if (recv(client, msg, 256, 0) == -1) {
 			printf("Buffer overflow on request message.\n");
-			send(client, ERROR_BAD_REQUEST, sizeof(ERROR_BAD_REQUEST), 0);
+			send(client, ERROR_400, sizeof(ERROR_400), 0);
 			close_conn(client);
 			continue;
 		}
 
 		// parse request type
-		int req_type_len = strchr(msg, ' ') - msg;
+		size_t req_type_len = strchr(msg, ' ') - msg;
 		char* req_type = check_ptr(malloc(req_type_len + 1));
 		substr(req_type, msg, req_type_len);
 		if (!req_type) {
 			printf("Error parsing Request.\n");
-			send(client, ERROR_BAD_REQUEST, sizeof(ERROR_BAD_REQUEST), 0);
+			send(client, ERROR_400, sizeof(ERROR_400), 0);
 			close_conn(client);
 			continue;
 		}
 
 		// parse file name
-		int file_name_len = strchr(strchr(msg, '/') + 1, ' ') - (strchr(msg, '/') + 1);
+		size_t file_name_len = strchr(strchr(msg, '/') + 1, ' ') - (strchr(msg, '/') + 1);
 		char* file_name = check_ptr(malloc(file_name_len + 1));
 		substr(file_name, msg + req_type_len + 2, file_name_len);
 		if (!file_name) {
 			printf("Error parsing Request\n");
-			send(client, ERROR_BAD_REQUEST, sizeof(ERROR_BAD_REQUEST), 0);
+			send(client, ERROR_400, sizeof(ERROR_400), 0);
 			close_conn(client);
 			continue;
 		}
@@ -149,7 +149,7 @@ int main() {
 			// file not found handling
 			if (!file_cont) {
 				printf("Failed to open file: %s\n", file_path);
-				send(client, ERROR_NOT_FOUND, sizeof(ERROR_NOT_FOUND), 0);
+				send(client, ERROR_404, sizeof(ERROR_404), 0);
 				close_conn(client);
 				continue;
 			}
@@ -161,8 +161,8 @@ int main() {
 
 			// send response
 			char* headers = base_headers(file_path);
-			send(client, headers, strlen(headers), 0);
-			send(client, file_cont, strlen(file_cont), 0);
+			send(client, headers, (int)strlen(headers), 0);
+			send(client, file_cont, (int)strlen(file_cont), 0);
 
 			close_conn(client);
 

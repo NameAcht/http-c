@@ -5,6 +5,7 @@
 
 #define STYLESHEET "../concrete.css"
 #define INDEX "../index.html"
+#define ERROR_404 "HTTP/1.1 404 Not found\nContent-Type: text/html\n\n404 Not found"
 
 // platform
 #ifdef _WIN32
@@ -115,7 +116,10 @@ int main() {
 			char* file_cont = parse_file(file_path);
 			if (!file_cont) {
 				printf("Failed to open file: %s\n", file_path);
-				return 0;
+				send(client, ERROR_404, sizeof(ERROR_404), 0);
+				shutdown(client, SD_SEND);
+				closesocket(client);
+				continue;
 			}
 
 			printf("GET request: ");

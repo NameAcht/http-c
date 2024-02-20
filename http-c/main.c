@@ -7,6 +7,7 @@
 #define INDEX "../index.html"
 #define ERROR_404 "HTTP/1.1 404 Not found\nContent-Type: text/html\n\n404 Not found"
 #define ERROR_400 "HTTP/1.1 400 Bad request\nContent-Type: text/html\n\n400 Bad request"
+#define MSG_BUFFER_SIZE 2048
 #define PORT 1000
 
 // platform
@@ -28,7 +29,7 @@ void substr(char* dst, const char* src, size_t size) {
 	dst[size] = '\0';
 }
 // make sure to free this pointer
-char* read_file(const char* path) {
+char* read_file(const char* path, int* size) {
 	FILE* file = fopen(path, "rb");
 	if (!file)
 		return 0;
@@ -40,6 +41,8 @@ char* read_file(const char* path) {
 	fread(file_cont, 1, fsize, file);
 	file_cont[fsize] = '\0';
 	fclose(file);
+
+	*size = fsize;
 	return file_cont;
 }
 char* base_headers(const char* path) {
@@ -110,8 +113,9 @@ int main() {
 		}
 
 		// receive message from client
-		char msg[256];
-		if (recv(client, msg, 256, 0) == -1) {
+		char msg[MSG_BUFFER_SIZE] = { 0 };
+		int bytes_rec;
+		if ((bytes_rec = recv(client, msg, MSG_BUFFER_SIZE, 0)) == -1) {
 			printf("Buffer overflow on request message.\n");
 			send(client, ERROR_400, sizeof(ERROR_400), 0);
 			close_conn(client);
@@ -152,7 +156,8 @@ int main() {
 		// handle requests
 		if (strcmp(req_type, "GET") == 0) {
 			// parse file content
-			char* file_cont = read_file(file_path);
+			int file_len = 0;
+			char* file_cont = read_file(file_path, &file_len);
 			// file not found handling
 			if (!file_cont) {
 				printf("Failed to open file: %s\n", file_path);
@@ -163,13 +168,13 @@ int main() {
 
 			// print request info
 			char* ip_str = itoipv4(client_addr.sin_addr.S_un.S_addr);
-			printf("GET request: %s\n", ip_str);
+			printf("GET request: %s\n%s", ip_str, msg);
 
 			// send response
 			char* headers = base_headers(file_path);
 			send(client, headers, (int)strlen(headers), 0);
-			send(client, file_cont, (int)strlen(file_cont), 0);
-
+			send(client, file_cont, file_len, 0);
+			
 			close_conn(client);
 
 			// free memory

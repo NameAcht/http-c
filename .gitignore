@@ -34,7 +34,7 @@
 # vs
 .vs/
 x64/
-http-c/x64
+/x64
 *.enc
 *.tlog
 *.log
@@ -42,3 +42,5 @@ http-c/x64
 *.suo
 *.vsidx
 *.pdb
+*.log
+http-c/x64/Debug/http-c.log

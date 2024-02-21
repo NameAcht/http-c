@@ -8,6 +8,7 @@
 #define ERROR_404 "HTTP/1.1 404 Not found\nContent-Type: text/html\n\n404 Not found"
 #define ERROR_400 "HTTP/1.1 400 Bad request\nContent-Type: text/html\n\n400 Bad request"
 #define MSG_BUFFER_SIZE 2048
+#define BUFFER_MAX 10240
 #define PORT 1000
 
 // platform
@@ -69,6 +70,20 @@ char* itoipv4(unsigned int ip_int) {
 		(ip_int >> 24) & 0xFF);
 	return ip_str;
 }
+char* receive(SOCKET client) {
+	char* msg = NULL;
+	for (int attempts = 1; MSG_BUFFER_SIZE * attempts <= BUFFER_MAX; attempts++) {
+		msg = check_ptr(malloc(MSG_BUFFER_SIZE * attempts));
+		int bytes_rec;
+		if ((bytes_rec = recv(client, msg, MSG_BUFFER_SIZE * attempts, 0)) != -1) {
+			msg[bytes_rec] = 0;
+			break;
+		}
+		free(msg);
+		msg = NULL;
+	}
+	return msg;
+}
 
 int main() {
 	// WinSock boilerplate
@@ -80,8 +95,8 @@ int main() {
 	}
 
 	// create socket
-	SOCKET listen_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (listen_socket == INVALID_SOCKET) {
+	SOCKET server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (server == INVALID_SOCKET) {
 		printf("Invalid listen socket.\n");
 		return 0;
 	}
@@ -94,13 +109,12 @@ int main() {
 	};
 
 	// bind socket to address
-	bind(listen_socket, (struct sockaddr*)&addr, sizeof(addr));
-
-	listen(listen_socket, 20);
+	bind(server, (struct sockaddr*)&addr, sizeof(addr));
+	listen(server, 20);
 
 	// http loop
 	while (true) {
-		SOCKET client = accept(listen_socket, NULL, NULL);
+		SOCKET client = accept(server, NULL, NULL);
 
 		// Get client IP address
 		struct sockaddr_in client_addr;
@@ -111,14 +125,13 @@ int main() {
 			close_conn(client);
 			continue;
 		}
-
+		
 		// receive message from client
-		char msg[MSG_BUFFER_SIZE] = { 0 };
-		int bytes_rec;
-		if ((bytes_rec = recv(client, msg, MSG_BUFFER_SIZE, 0)) == -1) {
-			printf("Buffer overflow on request message.\n");
+		// retry receiving until it cannot be received with max buffer size
+		// if the message can't be received with max buffer size, send error 400
+		char* msg = receive(client);
+		if (!msg) {
 			send(client, ERROR_400, sizeof(ERROR_400), 0);
-			close_conn(client);
 			continue;
 		}
 
@@ -186,7 +199,7 @@ int main() {
 	}
 
 	// resource cleanup
-	closesocket(listen_socket);
+	closesocket(server);
 	WSACleanup();
 
 	return 0;
